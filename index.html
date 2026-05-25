@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Шлёпа Кликер 2: Пельменная Империя</title>
+    <style>
+        body { background: #f0e6d2; text-align: center; font-family: sans-serif; user-select: none; transition: background 0.5s; }
+        .container { max-width: 500px; margin: 0 auto; }
+        #shlepa-img { width: 250px; height: 250px; object-fit: contain; cursor: pointer; transition: transform 0.05s; display: block; margin: 15px auto; }
+        #shlepa-img:active { transform: scale(0.93); }
+        
+        button { padding: 10px 20px; font-size: 14px; cursor: pointer; background: #4caf50; color: white; border: none; border-radius: 8px; font-weight: bold; margin: 5px; width: 80%; }
+        button:disabled { background: #cccccc; cursor: not-allowed; }
+        .shop-section { background: rgba(255,255,255,0.5); padding: 10px; border-radius: 10px; margin-top: 15px; }
+        
+        #golden-dumpling { width: 60px; height: 60px; position: absolute; cursor: pointer; display: none; z-index: 10; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+        
+        #end-screen { display: none; color: white; font-size: 30px; font-weight: bold; margin-top: 50px; text-shadow: 2px 2px 4px #000; }
+        
+        /* Кнопка включения музыки */
+        #music-control { background: #ff9800; width: auto; padding: 5px 15px; font-size: 12px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+<div class="container" id="main-game">
+
+    <audio id="bg-music" src="music.mp3" loop></audio>
+    <audio id="click-sound" src="click.mp3"></audio>
+    <audio id="golden-sound" src="golden.mp3"></audio>
+
+    <button id="music-control" onclick="toggleMusic()">🎵 Включить музыку</button>
+
+    <img id="golden-dumpling" src="золотой пельмень.jpg" onclick="catchGolden()" alt="Золотой!">
+
+    <h2 id="location-name">Локация: Обычная комната</h2>
+    <h1>Монеты: <span id="money">0</span></h1>
+    <p>Клик: +<span id="per-click">1</span> | В секунду (CPS): +<span id="per-second">0</span></p>
+
+    <img id="shlepa-img" src="shlepa.jpg" onclick="clickCat()" alt="Шлёпа">
+
+    <div class="shop-section" id="skin-shop">
+        <h3>Гардероб Шлёпы</h3>
+        <button id="skin-btn" onclick="buySkin()">Скин "Шлёпа-Пельмень" — Цена: 10000</button>
+    </div>
+
+    <div class="shop-section">
+        <h3>Улучшение клика</h3>
+        <button onclick="buyUpgrade()">Качалка пальцев (+1) — Цена: <span id="upg-price">50</span></button>
+    </div>
+
+    <div class="shop-section">
+        <h3>Пельменный бизнес (Базовый пассивный доход)</h3>
+        <button onclick="buyAuto(1, 100, 'auto1')">Маленький пельмешек (+1/сек) — Цена: <span id="auto1-price">100</span></button>
+        <button onclick="buyAuto(10, 800, 'auto2')">Королевский пельмень (+10/сек) — Цена: <span id="auto2-price">800</span></button>
+    </div>
+
+    <div class="shop-section">
+        <h3>Добавки к пельменям (Множители CPS)</h3>
+        <button id="sauce2-btn" onclick="buySauce(2, 1500, 'sauce2-btn')">Сметаночка (Автоклики x2) — Цена: 1500</button>
+        <button id="sauce3-btn" onclick="buySauce(3, 5000, 'sauce3-btn')">Маслице (Автоклики x3) — Цена: 5000</button>
+        <button id="sauce4-btn" onclick="buySauce(4, 15000, 'sauce4-btn')">Майонез (Автоклики x4) — Цена: 15000</button>
+    </div>
+
+    <div class="shop-section">
+        <h3>Смена Локации</h3>
+        <button id="loc-btn" onclick="buyLocation()">Купить локацию "Кухня завода" — Цена: 2000</button>
+    </div>
+
+</div>
+
+<div id="end-screen">
+    <p>КОНЕЦ</p>
+    <p style="font-size: 20px; color: #ffeb3b;">3 часть скоро...</p>
+</div>
+
+<script>
+    let money = 0;
+    let plusClick = 1;
+    let upgPrice = 50;
+    let baseCps = 0; 
+    let sauceMultiplier = 1; 
+    let factoryMultiplier = 1; 
+    let locStage = 1;
+    let hasSkin = false;
+    let isMusicPlaying = false;
+
+    let prices = { auto1: 100, auto2: 800 };
+
+    function toggleMusic() {
+        let music = document.getElementById('bg-music');
+        let btn = document.getElementById('music-control');
+        if (!isMusicPlaying) {
+            music.play();
+            btn.textContent = "⏸ Выключить музыку";
+            isMusicPlaying = true;
+        } else {
+            music.pause();
+            btn.textContent = "🎵 Включить музыку";
+            isMusicPlaying = false;
+        }
+    }
+
+    function playSound(id) {
+        let sound = document.getElementById(id);
+        sound.currentTime = 0; 
+        sound.play().catch(e => console.log("Звук ждет клика"));
+    }
+
+    function getFinalCps() {
+        return baseCps * sauceMultiplier * factoryMultiplier;
+    }
+
+    function updateUI() {
+        document.getElementById('money').textContent = Math.floor(money);
+        document.getElementById('per-click').textContent = plusClick * factoryMultiplier;
+        document.getElementById('per-second').textContent = Math.floor(getFinalCps());
+        document.getElementById('upg-price').textContent = upgPrice;
+        document.getElementById('auto1-price').textContent = prices.auto1;
+        document.getElementById('auto2-price').textContent = prices.auto2;
+    }
+
+    function clickCat() {
+        money += (plusClick * factoryMultiplier);
+        playSound('click-sound'); 
+        updateUI();
+    }
+
+    function buyUpgrade() {
+        if (money >= upgPrice) {
+            money -= upgPrice;
+            plusClick += 1;
+            upgPrice = Math.floor(upgPrice * 1.5);
+            updateUI();
+        } else { alert("Не хватает монет!"); }
+    }
+
+    function buyAuto(income, basePrice, type) {
+        if (money >= prices[type]) {
+            money -= prices[type];
+            baseCps += income;
+            prices[type] = Math.floor(prices[type] * 1.4);
+            updateUI();
+        } else { alert("Нужно больше монет!"); }
+    }
+
+    function buySauce(mult, cost, btnId) {
+        if (money >= cost) {
+            money -= cost;
+            sauceMultiplier = mult; 
+            document.getElementById(btnId).disabled = true;
+            document.getElementById(btnId).textContent = "Куплено!";
+            updateUI();
+            alert("Еда добавлена! Автоклик стал мощнее!");
+        } else { alert("Мало монет для вкусняшек!"); }
+    }
+
+    function buySkin() {
+        if (money >= 10000 && !hasSkin) {
+            money -= 10000;
+            hasSkin = true;
+            document.getElementById('shlepa-img').src = "pelmen_shlepa.jpg";
+            document.getElementById('skin-btn').textContent = "Экипировано: Шлёпа-Пельмень";
+            document.getElementById('skin-btn').disabled = true;
+            updateUI();
+            alert("Вау! Теперь ты Шлёпа-Пельмень! 🥟");
+        } else if (hasSkin) {
+            alert("Скин уже куплен!");
+        } else { alert("Скин Шлёпы-Пельменя стоит 10 000 монет!"); }
+    }
+
+    function buyLocation() {
+        if (locStage === 1 && money >= 2000) {
+            money -= 2000;
+            locStage = 2;
+            document.body.style.background = "#d2e6f0"; 
+            document.getElementById('location-name').textContent = "Локация: Кухня завода";
+            document.getElementById('loc-btn').textContent = "Купить локацию 'Фабрика (x2)' — Цена: 15000";
+            updateUI();
+            alert("Ты на Кухне завода!");
+        } 
+        else if (locStage === 2 && money >= 15000) {
+            money -= 15000;
+            locStage = 3;
+            factoryMultiplier = 2; 
+            document.body.style.background = "#b0bec5"; 
+            document.getElementById('location-name').textContent = "Локация: Фабрика ПЕЛЬМЕНЕЙ";
+            document.getElementById('loc-btn').textContent = "Купить локацию 'КОСМОС (КОНЕЦ)' — Цена: 50000";
+            updateUI();
+            alert("Фабрика куплена! Абсолютно весь доход и клики увеличены в 2 раза!");
+        } 
+        else if (locStage === 3 && money >= 50000) {
+            money -= 50000;
+            locStage = 4;
+            triggerEndGame();
+        } else {
+            alert("Недостаточно монет для расширения империи!");
+        }
+    }
+
+    function triggerEndGame() {
+        document.getElementById('main-game').style.display = 'none';
+        document.getElementById('bg-music').pause();
+        
+        document.body.style.background = "url('cosmos.jpg') no-repeat center center fixed";
+        document.body.style.backgroundSize = "cover";
+        
+        document.getElementById('end-screen').style.display = 'block';
+    }
+
+    setInterval(function() {
+        money += (getFinalCps() / 10); 
+        updateUI();
+    }, 100);
+
+    function spawnGolden() {
+        let golden = document.getElementById('golden-dumpling');
+        let x = Math.random() * (window.innerWidth - 80);
+        let y = Math.random() * (window.innerHeight - 80);
+        golden.style.left = x + 'px';
+        golden.style.top = y + 'px';
+        golden.style.display = 'block';
+        setTimeout(() => { golden.style.display = 'none'; }, 4000);
+    }
+
+    function catchGolden() {
+        document.getElementById('golden-dumpling').style.display = 'none';
+        playSound('golden-sound'); 
+        let bonus = (getFinalCps() + (plusClick * factoryMultiplier)) * 15 + 50;
+        money += bonus;
+        updateUI();
+        alert("Золотой Пельмень принес +" + Math.floor(bonus) + " монет!");
+    }
+
+    setInterval(function() {
+        if (Math.random() > 0.5 && locStage < 4) { spawnGolden(); }
+    }, 15000);
+
+</script>
+</body>
+</html>
