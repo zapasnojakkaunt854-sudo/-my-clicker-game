@@ -3,6 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Шлёпа Кликер</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        body { font-family: sans-serif; background-color: #f5ebd7; text-align: center; padding: 10px; user-select: none; }
+        .btn { background-color: #ff9800; color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; margin: 5px; font-weight: bold; }
+        .click-area img { width: 180px; cursor: pointer; }
+        .shop { margin-top: 20px; border-top: 2px dashed #ccc; padding-top: 10px; }
+        .item { background: #fff; padding: 10px; margin: 5px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; }
+        #golden-dumpling { position: absolute; width: 60px; display: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <button class="btn" id="music-btn" onclick="toggleMusic()">🎵 Музыка</button>
+    <h1>Монеты: <span id="money-display">0</span></h1>
+    <p>В секунду: <span id="cps-display">0</span></p>
+    
+    <div class="click-area">
+        <img src="shlepa.jpg" onclick="clickShlepa()">
+    </div>
+
+    <div class="shop">
+        <h3>Магазин</h3>
+        <div class="item">
+            <span>Пельмень (CPS +1)</span>
+            <button class="btn" onclick="buyUpgrade(10, 1)">Купить (10)</button>
+        </div>
+        <div class="item">
+            <span>Магнат (CPS +10)</span>
+            <button class="btn" onclick="buyUpgrade(100, 10)">Купить (100)</button>
+        </div>
+    </div>
+
+    <img id="golden-dumpling" src="золотой пельмень.jpg" onclick="catchGolden()">
+
+    <script>
+        let money = 0;
+        let cps = 0;
+        let isMusicPlaying = false;
+        
+        const bgMusic = new Audio('music.mp3');
+        bgMusic.loop = true;
+        const clickSound = new Audio('click.mp3');
+        const goldenSound = new Audio('golden.mp3');
+
+        function toggleMusic() {
+            if (!isMusicPlaying) { bgMusic.play(); isMusicPlaying = true; document.getElementById('music-btn').innerText = "⏸ Стоп"; }
+            else { bgMusic.pause(); isMusicPlaying = false; document.getElementById('music-btn').innerText = "🎵 Музыка"; }
+        }
+
+        function clickShlepa() {
+            clickSound.currentTime = 0; clickSound.play();
+            money++;
+            document.getElementById('money-display').innerText = money;
+        }
+
+        function buyUpgrade(cost, power) {
+            if (money >= cost) {
+                money -= cost;
+                cps += power;
+                document.getElementById('money-display').innerText = money;
+                document.getElementById('cps-display').innerText = cps;
+            }
+        }
+
+        function catchGolden() {
+            document.getElementById('golden-dumpling').style.display = 'none';
+            goldenSound.play();
+            money += 50;
+            document.getElementById('money-display').innerText = money;
+        }
+
+        setInterval(() => {
+            money += cps;
+            document.getElementById('money-display').innerText = money;
+        }, 1000);
+
+        setInterval(() => {
+            if (Math.random() > 0.7) {
+                const g = document.getElementById('golden-dumpling');
+                g.style.left = Math.random() * 80 + '%';
+                g.style.top = Math.random() * 80 + '%';
+                g.style.display = 'block';
+                setTimeout(() => g.style.display = 'none', 5000);
+            }
+        }, 10000);
+    </script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Шлёпа Кликер 2: Пельменная Империя</title>
     <link rel="manifest" href="manifest.json">
     <style>
